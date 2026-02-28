@@ -1,50 +1,87 @@
-# Welcome to your Expo app 👋
+# 🌾 किसान सहायक (KisanSahayak) - Farmer Assistant
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A simple React Native (Expo) farming assistant app with a numpad interface that provides audio responses in Hindi using Google's Gemini AI.
 
-## Get started
+## Features
 
-1. Install dependencies
+- **Numpad Interface** — Calculator-style input (press 1, 2, or 3)
+- **AI Responses** — Powered by Google Gemini (gemini-pro)
+- **Hindi Audio** — Text-to-Speech in Hindi (hi-IN)
+- **Three Functions:**
+  - `1` → फसल की जानकारी (Crop Information)
+  - `2` → क्षेत्रीय खेती समाचार (Regional Farming News)
+  - `3` → उर्वरक की जानकारी (Fertilizer Information)
 
-   ```bash
-   npm install
-   ```
+## Setup
 
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+### 1. Install Dependencies
 
 ```bash
-npm run reset-project
+npm install
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+### 2. Get a Gemini API Key
 
-## Learn more
+1. Go to [Google AI Studio](https://aistudio.google.com/apikey)
+2. Sign in with your Google account
+3. Click **"Create API Key"**
+4. Copy the key
 
-To learn more about developing your project with Expo, look at the following resources:
+### 3. Add Your API Key
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+1. Open the app
+2. Go to the **सेटिंग्स (Settings)** tab
+3. Paste your Gemini API key
+4. Press **सेव करें (Save)**
 
-## Join the community
+### 4. Run the App
 
-Join our community of developers creating universal apps.
+```bash
+# Start Expo dev server
+npx expo start
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+# Run on Android emulator
+npx expo start --android
+
+# Run on iOS simulator (macOS only)
+npx expo start --ios
+```
+
+## How to Use
+
+1. Open the app → see "किसान सहायक" welcome screen
+2. Press **1**, **2**, or **3** on the numpad
+3. Press **✓** to submit
+4. Wait for Gemini to respond
+5. Audio plays automatically in Hindi
+6. Read the transcript on screen
+7. Press **C** to clear and try again
+
+## Tech Stack
+
+- **React Native** (Expo SDK 54)
+- **expo-router** (file-based navigation)
+- **@google/generative-ai** (Gemini API)
+- **expo-speech** (Text-to-Speech)
+- **@react-native-async-storage/async-storage** (API key storage)
+
+## Project Structure
+
+```
+├── app/
+│   ├── _layout.tsx           # Root layout
+│   └── (tabs)/
+│       ├── _layout.tsx       # Tab navigator
+│       ├── index.tsx         # Home screen (numpad + AI)
+│       └── explore.tsx       # Settings screen
+├── src/
+│   ├── components/
+│   │   ├── Numpad.tsx        # Calculator numpad
+│   │   ├── LoadingSpinner.tsx
+│   │   └── AudioPlayer.tsx
+│   ├── services/
+│   │   ├── geminiService.ts  # Gemini API integration
+│   │   └── ttsService.ts     # Hindi TTS wrapper
+│   └── utils/
+│       └── constants.ts      # Colors, strings, prompts
+```

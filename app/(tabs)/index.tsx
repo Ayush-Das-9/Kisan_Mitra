@@ -1,98 +1,223 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from '@react-navigation/native';
+import React, { useCallback, useState } from 'react';
+import {
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+import AudioPlayer from '../../src/components/AudioPlayer';
+import LoadingSpinner from '../../src/components/LoadingSpinner';
+import Numpad from '../../src/components/Numpad';
+import { callGeminiAPI } from '../../src/services/geminiService';
+import { speakHindi, stopSpeaking } from '../../src/services/ttsService';
+import { COLORS, STORAGE_KEYS, STRINGS } from '../../src/utils/constants';
 
 export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+  const [input, setInput] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [speaking, setSpeaking] = useState(false);
+  const [transcript, setTranscript] = useState('');
+  const [apiKey, setApiKey] = useState('AIzaSyAb17-Yt_xNXT8X2YH7RvPcdgOpoAyp-aM');
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+  // Load API key when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      const loadApiKey = async () => {
+        try {
+          const key = await AsyncStorage.getItem(STORAGE_KEYS.API_KEY);
+          if (key) setApiKey(key);
+        } catch (e) {
+          console.error('Failed to load API key:', e);
+        }
+      };
+      loadApiKey();
+    }, [])
+  );
+
+  const handleNumberPress = (num: string) => {
+    // Only allow single digit input
+    setInput(num);
+  };
+
+  const handleClear = () => {
+    setInput('');
+    setTranscript('');
+    stopSpeaking();
+    setSpeaking(false);
+  };
+
+  const handleSubmit = async () => {
+    if (!input) return;
+
+    if (!apiKey) {
+      setTranscript(STRINGS.noApiKey);
+      return;
+    }
+
+    setLoading(true);
+    setTranscript('');
+
+    try {
+      // Call Gemini API
+      const response = await callGeminiAPI(input, apiKey);
+      setTranscript(response);
+      setLoading(false);
+
+      // Play audio
+      setSpeaking(true);
+      await speakHindi(response);
+      setSpeaking(false);
+    } catch (error) {
+      console.error('Error:', error);
+      setTranscript(STRINGS.errorOccurred);
+      setLoading(false);
+      setSpeaking(false);
+    }
+  };
+
+  const handleStopSpeaking = () => {
+    stopSpeaking();
+    setSpeaking(false);
+  };
+
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.emoji}>🌾</Text>
+          <Text style={styles.title}>{STRINGS.appTitle}</Text>
+          <Text style={styles.welcome}>{STRINGS.welcome}</Text>
+        </View>
+
+        {/* Instructions */}
+        <View style={styles.instructionsCard}>
+          <Text style={styles.instructionsTitle}>{STRINGS.instructions}</Text>
+          <Text style={styles.option}>{STRINGS.option1}</Text>
+          <Text style={styles.option}>{STRINGS.option2}</Text>
+          <Text style={styles.option}>{STRINGS.option3}</Text>
+        </View>
+
+        {/* Loading / Audio / Transcript */}
+        {loading && <LoadingSpinner message={STRINGS.processing} />}
+
+        <AudioPlayer isSpeaking={speaking} onStop={handleStopSpeaking} />
+
+        {transcript ? (
+          <View style={styles.transcriptCard}>
+            <Text style={styles.transcriptLabel}>जवाब:</Text>
+            <Text style={styles.transcriptText}>{transcript}</Text>
+          </View>
+        ) : null}
+
+        {/* Numpad */}
+        <View style={styles.numpadSection}>
+          <Numpad
+            value={input}
+            onNumberPress={handleNumberPress}
+            onClear={handleClear}
+            onSubmit={handleSubmit}
+            disabled={loading || speaking}
+          />
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  safeArea: {
+    flex: 1,
+    backgroundColor: COLORS.background,
   },
-  stepContainer: {
-    gap: 8,
+  container: {
+    flex: 1,
+  },
+  content: {
+    paddingBottom: 32,
+  },
+  header: {
+    alignItems: 'center',
+    paddingTop: 24,
+    paddingBottom: 8,
+  },
+  emoji: {
+    fontSize: 48,
+    marginBottom: 4,
+  },
+  title: {
+    fontSize: 32,
+    fontWeight: '800',
+    color: COLORS.primaryDark,
+    textAlign: 'center',
+  },
+  welcome: {
+    fontSize: 18,
+    color: COLORS.textSecondary,
+    marginTop: 4,
+  },
+  instructionsCard: {
+    backgroundColor: COLORS.white,
+    marginHorizontal: 16,
+    marginTop: 16,
+    marginBottom: 12,
+    borderRadius: 16,
+    padding: 20,
+    borderLeftWidth: 4,
+    borderLeftColor: COLORS.primary,
+    elevation: 2,
+    shadowColor: COLORS.black,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+  },
+  instructionsTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: COLORS.text,
+    marginBottom: 12,
+  },
+  option: {
+    fontSize: 17,
+    color: COLORS.text,
+    lineHeight: 30,
+    paddingLeft: 8,
+  },
+  transcriptCard: {
+    backgroundColor: COLORS.white,
+    marginHorizontal: 16,
+    marginVertical: 12,
+    borderRadius: 16,
+    padding: 20,
+    borderLeftWidth: 4,
+    borderLeftColor: COLORS.secondary,
+    elevation: 2,
+    shadowColor: COLORS.black,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+  },
+  transcriptLabel: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: COLORS.secondary,
     marginBottom: 8,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  transcriptText: {
+    fontSize: 16,
+    color: COLORS.text,
+    lineHeight: 26,
+  },
+  numpadSection: {
+    marginTop: 12,
+    paddingBottom: 16,
   },
 });
